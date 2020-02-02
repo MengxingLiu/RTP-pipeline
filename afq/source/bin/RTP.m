@@ -93,7 +93,6 @@ disp(jsonargs)
 
 if exist('jsonargs', 'var') && ~isempty(jsonargs);
     args = loadjson(jsonargs);
-
     if isfield(args, 'params')
         params = args.params;
     end
@@ -109,9 +108,9 @@ if ~isempty(params)
     end
 end
 
-
+class(params)
 %% Configure inputs and defaults
-input_dir = P.input_dir;
+input_dir = P.input_dir
 output_dir = P.output_dir;
 if notDefined('input_dir')
     if exist('/input', 'dir')
@@ -186,11 +185,17 @@ end
 % This is the default template is using right now, it is very bad... add it for
 % now but we will substitute it
 % Variable names might need adjusting
+J.t1_file = fullfile(P.anat_dir, 't1.nii.gz')
+J.output_dir    = P.output_dir
+J.input_dir 	= P.input_dir
+J.bvec_file     = fullfile(P.bvec_dir, 'dwi.bvecs')
+J.bval_file     = fullfile(P.bval_dir, 'dwi.bvals')
+J.dwi_file      = fullfile(P.nifti_dir, 'dwi.nii.gz')
 if ~isfield(J, 't1_file') || ~exist(J.t1_file, 'file')
     template_t1 = '/templates/MNI_EPI.nii.gz'; 
     J.t1_file = template_t1;
 end
-
+dw.bvalue = 1000
 %% Initialize diffusion parameters
 % LMX: maintain this structure for now, we'll see if we need it later
 dwParams            = dtiInitParams;
@@ -339,7 +344,9 @@ binDirName  = fullfile(outBaseName, 'bin');
 if(~exist(outBaseName,'dir'));mkdir(outBaseName);end
 if(~exist(binDirName,'dir')) ;mkdir(binDirName);end
 if(~exist('adcUnits','var')); adcUnits = ''; end
-
+P.buildDate = datestr(now, 'yyyy-mm-dd HH:MM')
+class(params)
+params = P
 params.buildDate = datestr(now,'yyyy-mm-dd HH:MM');
 l = license('inuse');
 params.buildId = sprintf('%s on Matlab R%s (%s)',l(1).user,version('-release'),computer);
@@ -376,7 +383,7 @@ files.fa        = fullfile(pBinDir,'fa.nii.gz');
 % files.faStd     = fullfile(pBinDir,'faStd.nii.gz');
 % files.mdStd     = fullfile(pBinDir,'mdStd.nii.gz');
 % files.pddDisp   = fullfile(pBinDir,'pddDispersion.nii.gz');
-
+files.t1 		= J.t1_file
 % This is new, we are going to copy the input data as output data and call it alligned in dt6
 
 % LMX: Check this one, if we have been leaving the files in the correct place,
@@ -399,8 +406,10 @@ dwDir.alignedBvalsFile = files.alignedDwBvals;
 
 % LMX: this is required. we are saving the dt6.mat file with all the required
 % variables and file names, required for the rest of the thing
+files
 save(dt6FileName,'adcUnits','params','files');
-dtiInitDt6Files(dt6FileName,dwDir,t1FileName);
+disp(dt6FileName)
+%dtiInitDt6Files(dt6FileName,dwDir,t1FileName);
 
 
 % XX. Save out parameters, svn revision info, etc. for future reference
@@ -411,10 +420,11 @@ dtiInitLog(dwParams,dwDir);
 
 % Exit operations (lmx: check what is necessary here, probably nothing, as we don't need to pass files between conotainers now)
 disp('***************** IMPORTANT *****************')
-disp(sprintf('Copying the following files from dtiInit to AFQ: %s and %s',J.t1_file,J.aparcaseg_file))
+%disp(sprintf('Copying the following files from dtiInit to AFQ: %s and %s',J.t1_file,J.aparcaseg_file))
 disp('***************** IMPORTANT *****************')
-copyfile(J.t1_file, J.output_dir)
-copyfile(J.aparcaseg_file, J.output_dir)
+%copyfile(J.t1_file, J.output_dir)
+copyfile(dt6FileName, J.input_dir)
+%copyfile(J.aparcaseg_file, J.output_dir)
 
 % (HERE  IT ENDS WHAT IT WAS IN DTI INIT)
 
@@ -446,7 +456,6 @@ fprintf('This is basedir: %s\n',   basedir)
 
 J       = load(fullfile(input_dir,'dt6.mat'));
 disp('This are the contents of dt6.mat')
-J.files
 
 % DWI file
 [p,f,e]= fileparts(J.files.alignedDwRaw);
@@ -461,7 +470,8 @@ if ~strcmp(p,basedir); J.files.alignedDwBvecs = fullfile(basedir,[f e]); end
 if ~strcmp(p,basedir); J.files.alignedDwBvals = fullfile(basedir,[f e]); end
 
 
-J.files.t1path    = fullfile(basedir,J.files.t1);
+% J.files.t1path    = fullfile(basedir,J.files.t1);
+J.files.t1path = J.files.t1
 fprintf('This is the absolute path to the t1: %s\n', J.files.t1path)
 if exist(J.files.t1path,'file')
     fprintf('T1 file %s Exists. \n', J.files.t1path)
