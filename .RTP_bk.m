@@ -107,10 +107,9 @@ if ~isempty(params)
         P = params;
     end
 end
-
 class(params)
 %% Configure inputs and defaults
-input_dir = P.input_dir
+input_dir = P.input_dir;
 output_dir = P.output_dir;
 if notDefined('input_dir')
     if exist('/input', 'dir')
@@ -119,8 +118,8 @@ if notDefined('input_dir')
         error('An input directory was not specified.');
     end
 end
-sub_dirs{1} = input_dir;
 
+sub_dirs{1} = input_dir;
 if notDefined('output_dir')
     if exist('/output', 'dir')
         output_dir = '/output';
@@ -185,22 +184,22 @@ end
 % This is the default template is using right now, it is very bad... add it for
 % now but we will substitute it
 % Variable names might need adjusting
-J.t1_file = fullfile(P.anat_dir, 't1.nii.gz')
-J.output_dir    = P.output_dir
-J.input_dir 	= P.input_dir
-J.bvec_file     = fullfile(P.bvec_dir, 'dwi.bvecs')
-J.bval_file     = fullfile(P.bval_dir, 'dwi.bvals')
-J.dwi_file      = fullfile(P.nifti_dir, 'dwi.nii.gz')
-if ~isfield(J, 't1_file') || ~exist(J.t1_file, 'file')
+%J.t1_file = fullfile(P.anat_dir, 't1.nii.gz')
+P.t1_file = fullfile(P.anat_dir, 't1.nii.gz')
+P.bvec_file     = fullfile(P.bvec_dir, 'dwi.bvecs');
+P.bval_file     = fullfile(P.bval_dir, 'dwi.bvals');
+P.dwi_file      = fullfile(P.nifti_dir, 'dwi.nii.gz');
+if ~isfield(P, 't1_file') || ~exist(P.t1_file, 'file')
     template_t1 = '/templates/MNI_EPI.nii.gz'; 
-    J.t1_file = template_t1;
+    P.t1_file = template_t1;
 end
+%dw.bvalue = 1000;
 %% Initialize diffusion parameters
 % LMX: maintain this structure for now, we'll see if we need it later
 dwParams            = dtiInitParams;
-dwParams.outDir     = J.output_dir;
-dwParams.bvecsFile  = J.bvec_file;
-dwParams.bvalsFile  = J.bval_file;
+dwParams.outDir     = P.output_dir;
+dwParams.bvecsFile  = P.bvec_file;
+dwParams.bvalsFile  = P.bval_file;
 %dwParams.bvalue     = dw.bvalue;
 
 %% Update the diffusion params from the JSON object
@@ -228,7 +227,7 @@ dwParams.bvalsFile  = J.bval_file;
 % we can make it optional later. 
 % If not, write again the file normalized so that it can be read downstream
 % Determine shell
-bvals = dlmread(J.bval_file);
+bvals = dlmread(P.bval_file);
 roundedBval  = 100 * round(bvals/100);
 paramsShells = unique(roundedBval);
 if 0 == min(paramsShells)
@@ -240,7 +239,7 @@ end
 
 % Write the files back
 warning('The bVals were normalized.')
-dlmwrite(J.bval_file, roundedBval, 'delimiter',' ');
+dlmwrite(P.bval_file, roundedBval, 'delimiter',' ');
 
 
 
@@ -263,8 +262,8 @@ dlmwrite(J.bval_file, roundedBval, 'delimiter',' ');
 
 
 % Here dtiInit was called, assign variables
-dwRawFileName = J.dwi_file;
-t1FileName    = J.t1_file;
+dwRawFileName = P.dwi_file;
+t1FileName    = P.t1_file;
 
 % I. Load the diffusion data, set up parameters and directories structure
 % Load the difusion data
@@ -282,7 +281,6 @@ dwRaw = niftiRead(dwRawFileName);
 
 % Initialize the structure containing all directory info and file names
 dwDir      = dtiInitDir(dwRawFileName,dwParams);
-outBaseDir = dwDir.outBaseDir;
 fprintf('Dims = [%d %d %d %d] \nData Dir = %s \n', size(dwRaw.data), dwDir.dataDir);
 fprintf('Output Dir = %s \n', dwDir.subjectDir);
 
@@ -343,15 +341,13 @@ binDirName  = fullfile(outBaseName, 'bin');
 if(~exist(outBaseName,'dir'));mkdir(outBaseName);end
 if(~exist(binDirName,'dir')) ;mkdir(binDirName);end
 if(~exist('adcUnits','var')); adcUnits = ''; end
-P.buildDate = datestr(now, 'yyyy-mm-dd HH:MM')
-class(params)
-params = P
+params = P;
 params.buildDate = datestr(now,'yyyy-mm-dd HH:MM');
 l = license('inuse');
 params.buildId = sprintf('%s on Matlab R%s (%s)',l(1).user,version('-release'),computer);
 if(ischar(dwRawFileName)); [dataDir,rawDataFileName] = fileparts(dwRawFileName);  % dwRawAligned);
 else                      [dataDir,rawDataFileName] = fileparts(dwRawFileName.fname);end  % dwRawAligned.fname); end
-endparams.rawDataDir = dataDir;
+%endparams.rawDataDir = dataDir;
 params.rawDataFile   = rawDataFileName;
 % We assume that the raw data file is a directory inside the 'subject' directory.
 params.subDir = fileparts(dataDir);
@@ -382,7 +378,7 @@ files.fa        = fullfile(pBinDir,'fa.nii.gz');
 % files.faStd     = fullfile(pBinDir,'faStd.nii.gz');
 % files.mdStd     = fullfile(pBinDir,'mdStd.nii.gz');
 % files.pddDisp   = fullfile(pBinDir,'pddDispersion.nii.gz');
-files.t1 		= J.t1_file
+files.t1 		= P.t1_file;
 % This is new, we are going to copy the input data as output data and call it alligned in dt6
 
 % LMX: Check this one, if we have been leaving the files in the correct place,
@@ -402,10 +398,9 @@ copyfile(dwParams.bvalsFile, dwParams.outDir);
 [~,fname,ext] = fileparts(dwParams.bvalsFile);
 files.alignedDwBvals = fullfile(dwParams.outDir,[fname ext]);
 dwDir.alignedBvalsFile = files.alignedDwBvals;
-
+files.alignedDwBvals
 % LMX: this is required. we are saving the dt6.mat file with all the required
 % variables and file names, required for the rest of the thing
-files
 save(dt6FileName,'adcUnits','params','files');
 disp(dt6FileName)
 %dtiInitDt6Files(dt6FileName,dwDir,t1FileName);
@@ -422,7 +417,7 @@ disp('***************** IMPORTANT *****************')
 %disp(sprintf('Copying the following files from dtiInit to AFQ: %s and %s',J.t1_file,J.aparcaseg_file))
 disp('***************** IMPORTANT *****************')
 %copyfile(J.t1_file, J.output_dir)
-copyfile(dt6FileName, J.input_dir)
+copyfile(dt6FileName, P.input_dir)
 %copyfile(J.aparcaseg_file, J.output_dir)
 
 % (HERE  IT ENDS WHAT IT WAS IN DTI INIT)
@@ -450,6 +445,7 @@ basedir = split(input_dir,filesep);
 basedir = strcat(basedir(1:end-1));
 basedir = fullfile('/',basedir{:});
 
+%sub_dirs{1} = basedir
 fprintf('This is input_dir: %s\n', input_dir)
 fprintf('This is basedir: %s\n',   basedir)
 
@@ -459,18 +455,16 @@ disp('This are the contents of dt6.mat')
 % DWI file
 [p,f,e]= fileparts(J.files.alignedDwRaw);
 if ~strcmp(p,basedir); J.files.alignedDwRaw = fullfile(basedir,[f e]); end
-
 % BVEC file
 [p,f,e]= fileparts(J.files.alignedDwBvecs);
 if ~strcmp(p,basedir); J.files.alignedDwBvecs = fullfile(basedir,[f e]); end
-
 % BVAL file
 [p,f,e]= fileparts(J.files.alignedDwBvals);
 if ~strcmp(p,basedir); J.files.alignedDwBvals = fullfile(basedir,[f e]); end
 
 
 % J.files.t1path    = fullfile(basedir,J.files.t1);
-J.files.t1path = J.files.t1
+J.files.t1path = J.files.t1;
 fprintf('This is the absolute path to the t1: %s\n', J.files.t1path)
 if exist(J.files.t1path,'file')
     fprintf('T1 file %s Exists. \n', J.files.t1path)
@@ -482,7 +476,7 @@ J.files.aparcaseg = fullfile(basedir,J.files.t1);
 asegFiles = dir(fullfile(basedir,'*aseg*'));
 for ii = 1:length(asegFiles)
     if length(strfind(asegFiles(ii).name, 'aseg')) > 0
-        J.files.aparcaseg = fullfile(basedir, asegFiles(ii).name);
+		J.files.aparcaseg = fullfile(basedir, asegFiles(ii).name);
     end
     if length(strfind(asegFiles(ii).name, 'aparc')) > 0
         J.files.aparcaseg = fullfile(basedir, asegFiles(ii).name);
@@ -497,7 +491,6 @@ if ~(exist(J.files.aparcaseg, 'file') == 2)
         error(['Cannot find T1, please copy it to ' basedir]);
     end
 end
-
 % Check it in these files
 checkfiles = {'alignedDwRaw','t1path','aparcaseg'};
 for nc=1:length(checkfiles)
@@ -571,7 +564,6 @@ save(fullfile(input_dir,'dt6.mat'),'adcUnits','params','files');
 if notDefined('out_name')
     out_name = ['afq_', getDateAndTime];
 end
-
 disp('Running AFQ_create with the following options...');
 fprintf('sub_dirs: %s', sub_dirs{1})
 fprintf('output_dir: %s', output_dir)
@@ -592,7 +584,6 @@ disp('... end running AFQ_Create')
 
 
 %% RUN AFQ
-
 disp('Running AFQ_run with the following options...');
 fprintf('sub_dirs: %s', sub_dirs{1})
 disp('This is the afq struct');
@@ -677,7 +668,7 @@ copyfile([predti '/*.bv*'], output_dir);
 copyfile([predti '/*.nii*'], output_dir);
 
 % Obtain the files
-%if isdeployed
+% if isdeployed
     % Convert the ROIs from mat to .nii.gz
     % Read the b0
     img  = niftiRead(fullfile(input_dir, 'bin', 'b0.nii.gz'));
@@ -735,7 +726,7 @@ copyfile([predti '/*.nii*'], output_dir);
     end
     % Now we can copy the output to the vis_files, and decide later if copying
     % it to results so that it can be visualized in FW
-%{    
+%{   
 else
     % This will be used to download the files when using matlab online:
     % The important part is to make work the isdeployed part. 
